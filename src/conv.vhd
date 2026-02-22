@@ -38,6 +38,9 @@ end conv;
 
 architecture conv_arch of conv is
 
+    -- Two signals needed for the firewall assertions
+    signal firewall_length_u, firewall_length_v : std_ulogic_vector(LENGHT_MAX-1 downto 0) :=  (others =>'0');
+
 
     type state_mem is (REPOSO, STORE, WAIT_CONV);
     signal v_state_a, p_v_state_a,u_state_a, p_u_state_a : state_mem;
@@ -385,5 +388,42 @@ begin
   end process;
 
   m_tdata_w <= std_ulogic_vector(w_sample(LBITS-1 downto 0));
+
+  -- Firewall assertions: assure that our module is being used correctly
+  --
+  -- What can go wrong?
+  --
+  -- 1) length_u changes while  it is storing data or calculating conv
+  --
+  -- 2) length_v changes while  it is storing data or calculating conv
+  --
+  -- An interesting idea here would be to define a procedure in
+  -- edc_common.vhd called "fail_in_N_cycles", which would
+  -- wait N clock cycles before stopping the simulation
+
+  firewall_assertions: process (clk)
+  begin
+
+    if falling_edge(clk) then
+
+        firewall_length_u <= length_u;
+        firewall_length_v <= length_v;
+
+        if u_state_a /= REPOSO or conv_state /= REPOSO then
+            if (firewall_length_u /= length_u) then
+                report "length_u changed while conv busy, interpolation will be wrong"
+                severity failure;
+            end if;
+        end if;
+
+        if v_state_a /= REPOSO or conv_state /= REPOSO then
+            if (firewall_length_v /= length_v) then
+                report "length_v changed while conv busy, interpolation will be wrong"
+                severity failure;
+            end if;
+        end if;
+        
+    end if;
+  end process;
 
 end conv_arch;
