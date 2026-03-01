@@ -45,7 +45,7 @@ architecture conv_arch of conv is
     type state_mem is (REPOSO, STORE, WAIT_CONV);
     signal v_state_a, p_v_state_a,u_state_a, p_u_state_a : state_mem;
 
-    type state_conv is (REPOSO, MULT, CONV);
+    type state_conv is (REPOSO, MULT, CONV_CALC);
     signal conv_state, p_conv_state : state_conv;
 
     signal len_u, len_v: unsigned(LENGHT_MAX downto 0); 
@@ -54,11 +54,11 @@ architecture conv_arch of conv is
 
     signal v_sample, u_sample : signed (LBITS-1 downto 0);
 
-    signal index_v_sample, p_index_v_sample ,index_u_sample, p_index_u_sample : unsigned (LENGHT_MAX-1 downto 0); 
+    signal index_v_sample, p_index_v_sample ,index_u_sample, p_index_u_sample : unsigned (LENGHT_MAX-1 downto 0) := (others=> '0'); 
 
     signal p_w_sample, w_sample: signed(LENGHT_MAX+LBITS*2-1 downto 0); -- Max value of w sample is (others=>'1')'length(LBITS)*(others=>'1')'length(LBITS)*(others=>'1')'length(LENGHT_MAX) 
 
-    constant one_LENGHT_MAX: signed(LENGHT_MAX-1 downto 0) := (LENGHT_MAX-1 downto 1 => '0', 0 => '1');
+    constant one_LENGHT_MAX: signed(LENGHT_MAX-1 downto 0) := (0 => '1', others=> '0');
 
 
     signal u_addri_a : unsigned (LENGHT_MAX-1 downto 0);          -- Address for port A
@@ -193,6 +193,7 @@ begin
         conv_state<= REPOSO;
         index_v_sample <= (others=>'0');
         index_u_sample <= (others=>'0');
+        w_sample <= (others=>'0');
     elsif (rising_edge(clk)) then
         if (reset_sinc = '1') then
             v_state_a <= REPOSO;
@@ -200,12 +201,14 @@ begin
             conv_state<= REPOSO;
             index_v_sample <= (others=>'0');
             index_u_sample <= (others=>'0');
+            w_sample <= (others=>'0');
         else
             v_state_a <= p_v_state_a;
             u_state_a <= p_u_state_a;
             conv_state<= p_conv_state;
             index_v_sample <= p_index_v_sample;
             index_u_sample <= p_index_u_sample;
+            w_sample <= p_w_sample;
         end if;
     end if;
 
@@ -291,10 +294,10 @@ begin
         when MULT =>
 
             if v_addri_b = len_v - 1 then
-                p_conv_state <= CONV;
+                p_conv_state <= CONV_CALC;
             end if;
 
-        when CONV => 
+        when CONV_CALC => 
             if m_tready_w = '1' then
                 p_conv_state <= MULT;
                 if u_addri_b = len_u - 1 then
@@ -376,7 +379,7 @@ begin
             p_index_u_sample <= index_u_sample + 1 ;
             p_w_sample <= w_sample + u_sample*v_sample*one_LENGHT_MAX;
 
-        when CONV => 
+        when CONV_CALC => 
 
             m_tvalid_w <= '1';
             if m_tready_w = '1' then

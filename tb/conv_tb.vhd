@@ -68,17 +68,19 @@ begin
 
   master_u:process
 
-    file archivo_csv : text open read_mode is "senales_U_pulso.csv";
+    file archivo_csv : text open read_mode is "/home/salas/Escritorio/github_proyectos/VHDL_DISCREET_CONVOLUTION/test_inputs/senales_U_pulso.csv";
     variable linea      : line;
     variable valor1     : integer;
 
   begin
-    length_u <= "01100100"; -- 100
+    length_u <= "1100100"; -- 100
     s_tvalid_u <= '1';
     readline(archivo_csv, linea);
 
     -- Leer primer número
     read(linea, valor1);
+
+    s_tdata_u <= std_ulogic_vector(to_unsigned(valor1, LBITS));
 
     wait for clk_period;
 
@@ -89,6 +91,7 @@ begin
 
         -- Leer primer número
         read(linea, valor1);
+        s_tdata_u <= std_ulogic_vector(to_unsigned(valor1, LBITS));
         end if;
 
         wait for clk_period;
@@ -102,17 +105,18 @@ begin
 
   master_v:process
 
-    file archivo_csv : text open read_mode is "senales_V_pulso.csv";
+    file archivo_csv : text open read_mode is "/home/salas/Escritorio/github_proyectos/VHDL_DISCREET_CONVOLUTION/test_inputs/senales_V_pulso.csv";
     variable linea      : line;
     variable valor1     : integer;
 
   begin
-    length_v <= "01100100"; -- 100
+    length_v <= "1100100"; -- 100
     s_tvalid_v <= '1';
     readline(archivo_csv, linea);
 
     -- Leer primer número
     read(linea, valor1);
+    s_tdata_v <= std_ulogic_vector(to_unsigned(valor1, LBITS));
 
     wait for clk_period;
 
@@ -123,6 +127,7 @@ begin
 
         -- Leer primer número
         read(linea, valor1);
+        s_tdata_v <= std_ulogic_vector(to_unsigned(valor1, LBITS));
         end if;
 
         wait for clk_period;
@@ -135,7 +140,7 @@ begin
 
   slave_w:process
 
-    file archivo_csv : text open write_mode  is "senal_w.csv";
+    file archivo_csv : text open write_mode  is "/home/salas/Escritorio/github_proyectos/VHDL_DISCREET_CONVOLUTION/test_outputs/senal_w.csv";
     variable linea      : line;
     variable valor1     : integer;
     variable contador: integer;
@@ -143,9 +148,11 @@ begin
   begin
 
     m_tready_w <= '1';
-    while contador < unsigned(length_u) + unsigned(length_v) - 1 loop
+    while contador < to_integer(unsigned(length_u)) + to_integer(unsigned(length_v)) - 1 loop
 
         if m_tvalid_w = '1' then
+
+        valor1 := to_integer(unsigned(m_tdata_w));  
         write(linea, valor1);
         writeline(archivo_csv, linea);
         contador := contador +1;
